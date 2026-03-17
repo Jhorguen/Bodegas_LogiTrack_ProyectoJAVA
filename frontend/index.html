@@ -44,6 +44,13 @@
                     <label>Contrasena</label>
                     <input type="password" id="regPass" placeholder="Elige una contrasena">
                 </div>
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select id="regRol">
+                        <option value="EMPLEADO">Empleado</option>
+                        <option value="ADMIN">Administrador</option>
+                    </select>
+                </div>
                 <button class="btn btn-primary" onclick="handleRegister()">Registrarse</button>
                 <p style="text-align:center; margin-top:16px; font-size:13px;">
                     Ya tienes cuenta? <a href="#" onclick="toggleForm()" style="color:#2d6a9f;">Inicia Sesion</a>
@@ -106,7 +113,8 @@
             }
 
             try {
-                const res = await register(username, password, nombre);
+                const rol = document.getElementById('regRol').value;
+                const res = await register(username, password, nombre, rol);
                 const data = await res.json();
 
                 if (res.ok) {

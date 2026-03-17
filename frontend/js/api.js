@@ -52,11 +52,11 @@ async function login(username, password) {
     return response;
 }
 
-async function register(username, password, nombreCompleto) {
+async function register(username, password, nombreCompleto, rol) {
     const response = await fetch(API_URL + '/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, nombreCompleto })
+        body: JSON.stringify({ username, password, nombreCompleto, rol })
     });
     return response;
 }

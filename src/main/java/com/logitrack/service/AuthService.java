@@ -3,6 +3,8 @@ package com.logitrack.service;
 import com.logitrack.dto.AuthResponse;
 import com.logitrack.dto.LoginRequest;
 import com.logitrack.dto.RegisterRequest;
+import com.logitrack.exception.BusinessException;
+import com.logitrack.exception.ResourceNotFoundException;
 import com.logitrack.model.Usuario;
 import com.logitrack.model.enums.Rol;
 import com.logitrack.repository.UsuarioRepository;
@@ -28,7 +30,7 @@ public class AuthService {
         );
 
         Usuario usuario = usuarioRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         String token = jwtUtil.generateToken(usuario.getUsername(), usuario.getRol().name());
 
@@ -37,14 +39,14 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (usuarioRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("El usuario ya existe");
+            throw new BusinessException("El usuario ya existe");
         }
 
         Usuario usuario = Usuario.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nombreCompleto(request.getNombreCompleto())
-                .rol(Rol.EMPLEADO)
+                .rol(request.getRol() != null && request.getRol().equalsIgnoreCase("ADMIN") ? Rol.ADMIN : Rol.EMPLEADO)
                 .build();
 
         usuarioRepository.save(usuario);
