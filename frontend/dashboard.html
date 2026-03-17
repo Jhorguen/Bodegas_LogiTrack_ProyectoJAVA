@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiTrack - Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>LogiTrack</h2>
+                <small>Gestion de Bodegas</small>
+            </div>
+            <div class="user-info">
+                Bienvenido, <strong id="userDisplay"></strong>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html" class="active"><span>📊</span> Dashboard</a>
+                <a href="bodegas.html"><span>🏭</span> Bodegas</a>
+                <a href="productos.html"><span>📦</span> Productos</a>
+                <a href="movimientos.html"><span>🔄</span> Movimientos</a>
+                <a href="auditorias.html"><span>📋</span> Auditorias</a>
+            </div>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()">Cerrar Sesion</a>
+            </div>
+        </nav>
+
+        <!-- Contenido -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Dashboard</h1>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-icon">🏭</div>
+                    <h3>Total Bodegas</h3>
+                    <div class="card-value" id="totalBodegas">-</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">📦</div>
+                    <h3>Total Productos</h3>
+                    <div class="card-value" id="totalProductos">-</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">⚠️</div>
+                    <h3>Stock Bajo</h3>
+                    <div class="card-value" id="totalStockBajo">-</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🔄</div>
+                    <h3>Movimientos</h3>
+                    <div class="card-value" id="totalMovimientos">-</div>
+                </div>
+            </div>
+
+            <!-- Productos con stock bajo -->
+            <h2 style="color:#1e3a5f; margin-bottom:16px;">Productos con Stock Bajo</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Categoria</th>
+                            <th>Stock</th>
+                            <th>Precio</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaStockBajo">
+                        <tr><td colspan="4" style="text-align:center;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Ultimos movimientos -->
+            <h2 style="color:#1e3a5f; margin-bottom:16px; margin-top:30px;">Ultimos Movimientos</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Usuario</th>
+                            <th>Origen</th>
+                            <th>Destino</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaMovimientos">
+                        <tr><td colspan="5" style="text-align:center;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        verificarAuth();
+        document.getElementById('userDisplay').textContent = getUsuario();
+
+        async function cargarDashboard() {
+            try {
+                const [bodegas, productos, stockBajo, movimientos] = await Promise.all([
+                    obtenerBodegas(),
+                    obtenerProductos(),
+                    obtenerStockBajo(),
+                    obtenerMovimientos()
+                ]);
+
+                document.getElementById('totalBodegas').textContent = bodegas.length;
+                document.getElementById('totalProductos').textContent = productos.length;
+                document.getElementById('totalStockBajo').textContent = stockBajo.length;
+                document.getElementById('totalMovimientos').textContent = movimientos.length;
+
+                // Stock bajo
+                const tbStockBajo = document.getElementById('tablaStockBajo');
+                if (stockBajo.length === 0) {
+                    tbStockBajo.innerHTML = '<tr><td colspan="4" style="text-align:center;">Sin productos con stock bajo</td></tr>';
+                } else {
+                    tbStockBajo.innerHTML = stockBajo.map(p => `
+                        <tr>
+                            <td>${p.nombre}</td>
+                            <td>${p.categoria}</td>
+                            <td class="stock-bajo">${p.stock}</td>
+                            <td>$${p.precio.toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                // Ultimos movimientos (5)
+                const tbMov = document.getElementById('tablaMovimientos');
+                const ultimos = movimientos.slice(-5).reverse();
+                if (ultimos.length === 0) {
+                    tbMov.innerHTML = '<tr><td colspan="5" style="text-align:center;">Sin movimientos</td></tr>';
+                } else {
+                    tbMov.innerHTML = ultimos.map(m => `
+                        <tr>
+                            <td>${new Date(m.fecha).toLocaleString()}</td>
+                            <td><span class="badge badge-${m.tipoMovimiento.toLowerCase()}">${m.tipoMovimiento}</span></td>
+                            <td>${m.usuario}</td>
+                            <td>${m.bodegaOrigen || '-'}</td>
+                            <td>${m.bodegaDestino || '-'}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('Error cargando dashboard:', e);
+            }
+        }
+
+        cargarDashboard();
+    </script>
+</body>
+</html>

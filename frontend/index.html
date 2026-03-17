@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiTrack - Iniciar Sesion</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <h1>LogiTrack</h1>
+            <p>Sistema de Gestion de Bodegas</p>
+
+            <div id="alert" class="alert"></div>
+
+            <!-- Login -->
+            <div id="loginForm">
+                <div class="form-group">
+                    <label>Usuario</label>
+                    <input type="text" id="loginUser" placeholder="Ingrese su usuario">
+                </div>
+                <div class="form-group">
+                    <label>Contrasena</label>
+                    <input type="password" id="loginPass" placeholder="Ingrese su contrasena">
+                </div>
+                <button class="btn btn-primary" onclick="handleLogin()">Iniciar Sesion</button>
+                <p style="text-align:center; margin-top:16px; font-size:13px;">
+                    No tienes cuenta? <a href="#" onclick="toggleForm()" style="color:#2d6a9f;">Registrate</a>
+                </p>
+            </div>
+
+            <!-- Registro -->
+            <div id="registerForm" style="display:none;">
+                <div class="form-group">
+                    <label>Usuario</label>
+                    <input type="text" id="regUser" placeholder="Elige un usuario">
+                </div>
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="regNombre" placeholder="Tu nombre completo">
+                </div>
+                <div class="form-group">
+                    <label>Contrasena</label>
+                    <input type="password" id="regPass" placeholder="Elige una contrasena">
+                </div>
+                <button class="btn btn-primary" onclick="handleRegister()">Registrarse</button>
+                <p style="text-align:center; margin-top:16px; font-size:13px;">
+                    Ya tienes cuenta? <a href="#" onclick="toggleForm()" style="color:#2d6a9f;">Inicia Sesion</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        function showAlert(msg, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = msg;
+            alert.className = 'alert alert-' + type;
+            alert.style.display = 'block';
+            setTimeout(() => alert.style.display = 'none', 4000);
+        }
+
+        function toggleForm() {
+            const login = document.getElementById('loginForm');
+            const register = document.getElementById('registerForm');
+            login.style.display = login.style.display === 'none' ? 'block' : 'none';
+            register.style.display = register.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('loginUser').value;
+            const password = document.getElementById('loginPass').value;
+
+            if (!username || !password) {
+                showAlert('Completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                const res = await login(username, password);
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('usuario', data.username);
+                    localStorage.setItem('rol', data.rol);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    showAlert(data.mensaje || 'Credenciales incorrectas', 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexion con el servidor', 'error');
+            }
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('regUser').value;
+            const nombre = document.getElementById('regNombre').value;
+            const password = document.getElementById('regPass').value;
+
+            if (!username || !nombre || !password) {
+                showAlert('Completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                const res = await register(username, password, nombre);
+                const data = await res.json();
+
+                if (res.ok) {
+                    showAlert('Registro exitoso! Inicia sesion', 'success');
+                    toggleForm();
+                } else {
+                    showAlert(data.mensaje || 'Error en el registro', 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexion con el servidor', 'error');
+            }
+        }
+
+        // Enter para login
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') handleLogin();
+        });
+    </script>
+</body>
+</html>

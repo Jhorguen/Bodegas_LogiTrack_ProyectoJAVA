@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiTrack - Productos</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>LogiTrack</h2>
+                <small>Gestion de Bodegas</small>
+            </div>
+            <div class="user-info">
+                Bienvenido, <strong id="userDisplay"></strong>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html"><span>📊</span> Dashboard</a>
+                <a href="bodegas.html"><span>🏭</span> Bodegas</a>
+                <a href="productos.html" class="active"><span>📦</span> Productos</a>
+                <a href="movimientos.html"><span>🔄</span> Movimientos</a>
+                <a href="auditorias.html"><span>📋</span> Auditorias</a>
+            </div>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()">Cerrar Sesion</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Gestion de Productos</h1>
+                <button class="btn btn-success" onclick="abrirModal()">+ Nuevo Producto</button>
+            </div>
+
+            <div id="alert" class="alert"></div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Categoria</th>
+                            <th>Stock</th>
+                            <th>Precio</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductos">
+                        <tr><td colspan="6" style="text-align:center;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2 id="modalTitle">Nuevo Producto</h2>
+            <input type="hidden" id="productoId">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="nombre" placeholder="Nombre del producto">
+            </div>
+            <div class="form-group">
+                <label>Categoria</label>
+                <input type="text" id="categoria" placeholder="Ej: Electronica, Accesorios">
+            </div>
+            <div class="form-group">
+                <label>Stock</label>
+                <input type="number" id="stock" placeholder="Cantidad en inventario">
+            </div>
+            <div class="form-group">
+                <label>Precio</label>
+                <input type="number" id="precio" placeholder="Precio unitario" step="0.01">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-danger" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="guardarProducto()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        verificarAuth();
+        document.getElementById('userDisplay').textContent = getUsuario();
+
+        function showAlert(msg, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = msg;
+            alert.className = 'alert alert-' + type;
+            alert.style.display = 'block';
+            setTimeout(() => alert.style.display = 'none', 4000);
+        }
+
+        async function cargarProductos() {
+            try {
+                const productos = await obtenerProductos();
+                const tbody = document.getElementById('tablaProductos');
+
+                if (productos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay productos registrados</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = productos.map(p => `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.nombre}</td>
+                        <td>${p.categoria}</td>
+                        <td class="${p.stock < 10 ? 'stock-bajo' : ''}">${p.stock}</td>
+                        <td>$${p.precio.toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="editarProducto(${p.id})">Editar</button>
+                            <button class="btn btn-danger btn-sm" onclick="borrarProducto(${p.id})">Eliminar</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        }
+
+        function abrirModal() {
+            document.getElementById('modalTitle').textContent = 'Nuevo Producto';
+            document.getElementById('productoId').value = '';
+            document.getElementById('nombre').value = '';
+            document.getElementById('categoria').value = '';
+            document.getElementById('stock').value = '';
+            document.getElementById('precio').value = '';
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        async function editarProducto(id) {
+            const producto = await obtenerProducto(id);
+            document.getElementById('modalTitle').textContent = 'Editar Producto';
+            document.getElementById('productoId').value = producto.id;
+            document.getElementById('nombre').value = producto.nombre;
+            document.getElementById('categoria').value = producto.categoria;
+            document.getElementById('stock').value = producto.stock;
+            document.getElementById('precio').value = producto.precio;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        async function guardarProducto() {
+            const id = document.getElementById('productoId').value;
+            const data = {
+                nombre: document.getElementById('nombre').value,
+                categoria: document.getElementById('categoria').value,
+                stock: parseInt(document.getElementById('stock').value),
+                precio: parseFloat(document.getElementById('precio').value)
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await actualizarProducto(id, data);
+                } else {
+                    res = await crearProducto(data);
+                }
+
+                if (res.ok) {
+                    showAlert(id ? 'Producto actualizado' : 'Producto creado', 'success');
+                    cerrarModal();
+                    cargarProductos();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.mensaje || 'Error al guardar', 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexion', 'error');
+            }
+        }
+
+        async function borrarProducto(id) {
+            if (!confirm('Seguro que deseas eliminar este producto?')) return;
+
+            try {
+                const res = await eliminarProducto(id);
+                if (res.ok) {
+                    showAlert('Producto eliminado', 'success');
+                    cargarProductos();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.mensaje || 'Error al eliminar', 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexion', 'error');
+            }
+        }
+
+        cargarProductos();
+    </script>
+</body>
+</html>

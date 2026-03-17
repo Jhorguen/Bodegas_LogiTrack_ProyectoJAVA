@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiTrack - Bodegas</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>LogiTrack</h2>
+                <small>Gestion de Bodegas</small>
+            </div>
+            <div class="user-info">
+                Bienvenido, <strong id="userDisplay"></strong>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html"><span>📊</span> Dashboard</a>
+                <a href="bodegas.html" class="active"><span>🏭</span> Bodegas</a>
+                <a href="productos.html"><span>📦</span> Productos</a>
+                <a href="movimientos.html"><span>🔄</span> Movimientos</a>
+                <a href="auditorias.html"><span>📋</span> Auditorias</a>
+            </div>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()">Cerrar Sesion</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Gestion de Bodegas</h1>
+                <button class="btn btn-success" onclick="abrirModal()">+ Nueva Bodega</button>
+            </div>
+
+            <div id="alert" class="alert"></div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Ubicacion</th>
+                            <th>Capacidad</th>
+                            <th>Encargado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBodegas">
+                        <tr><td colspan="6" style="text-align:center;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2 id="modalTitle">Nueva Bodega</h2>
+            <input type="hidden" id="bodegaId">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="nombre" placeholder="Nombre de la bodega">
+            </div>
+            <div class="form-group">
+                <label>Ubicacion</label>
+                <input type="text" id="ubicacion" placeholder="Ciudad o direccion">
+            </div>
+            <div class="form-group">
+                <label>Capacidad</label>
+                <input type="number" id="capacidad" placeholder="Capacidad maxima">
+            </div>
+            <div class="form-group">
+                <label>Encargado</label>
+                <input type="text" id="encargado" placeholder="Nombre del encargado">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-danger" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="guardarBodega()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        verificarAuth();
+        document.getElementById('userDisplay').textContent = getUsuario();
+
+        function showAlert(msg, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = msg;
+            alert.className = 'alert alert-' + type;
+            alert.style.display = 'block';
+            setTimeout(() => alert.style.display = 'none', 4000);
+        }
+
+        async function cargarBodegas() {
+            try {
+                const bodegas = await obtenerBodegas();
+                const tbody = document.getElementById('tablaBodegas');
+
+                if (bodegas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay bodegas registradas</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = bodegas.map(b => `
+                    <tr>
+                        <td>${b.id}</td>
+                        <td>${b.nombre}</td>
+                        <td>${b.ubicacion}</td>
+                        <td>${b.capacidad}</td>
+                        <td>${b.encargado}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="editarBodega(${b.id})">Editar</button>
+                            <button class="btn btn-danger btn-sm" onclick="borrarBodega(${b.id})">Eliminar</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        }
+
+        function abrirModal() {
+            document.getElementById('modalTitle').textContent = 'Nueva Bodega';
+            document.getElementById('bodegaId').value = '';
+            document.getElementById('nombre').value = '';
+            document.getElementById('ubicacion').value = '';
+            document.getElementById('capacidad').value = '';
+            document.getElementById('encargado').value = '';
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        async function editarBodega(id) {
+            const bodega = await obtenerBodega(id);
+            document.getElementById('modalTitle').textContent = 'Editar Bodega';
+            document.getElementById('bodegaId').value = bodega.id;
+            document.getElementById('nombre').value = bodega.nombre;
+            document.getElementById('ubicacion').value = bodega.ubicacion;
+            document.getElementById('capacidad').value = bodega.capacidad;
+            document.getElementById('encargado').value = bodega.encargado;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        async function guardarBodega() {
+            const id = document.getElementById('bodegaId').value;
+            const data = {
+                nombre: document.getElementById('nombre').value,
+                ubicacion: document.getElementById('ubicacion').value,
+                capacidad: parseInt(document.getElementById('capacidad').value),
+                encargado: document.getElementById('encargado').value
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await actualizarBodega(id, data);
+                } else {
+                    res = await crearBodega(data);
+                }
+
+                if (res.ok) {
+                    showAlert(id ? 'Bodega actualizada' : 'Bodega creada', 'success');
+                    cerrarModal();
+                    cargarBodegas();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.mensaje || 'Error al guardar', 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexion', 'error');
+            }
+        }
+
+        async function borrarBodega(id) {
+            if (!confirm('Seguro que deseas eliminar esta bodega?')) return;
+
+            try {
+                const res = await eliminarBodega(id);
+                if (res.ok) {
+                    showAlert('Bodega eliminada', 'success');
+                    cargarBodegas();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.mensaje || 'Error al eliminar', 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexion', 'error');
+            }
+        }
+
+        cargarBodegas();
+    </script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiTrack - Movimientos</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>LogiTrack</h2>
+                <small>Gestion de Bodegas</small>
+            </div>
+            <div class="user-info">
+                Bienvenido, <strong id="userDisplay"></strong>
+            </div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html"><span>📊</span> Dashboard</a>
+                <a href="bodegas.html"><span>🏭</span> Bodegas</a>
+                <a href="productos.html"><span>📦</span> Productos</a>
+                <a href="movimientos.html" class="active"><span>🔄</span> Movimientos</a>
+                <a href="auditorias.html"><span>📋</span> Auditorias</a>
+            </div>
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()">Cerrar Sesion</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Movimientos de Inventario</h1>
+                <button class="btn btn-success" onclick="abrirModal()">+ Nuevo Movimiento</button>
+            </div>
+
+            <div id="alert" class="alert"></div>
+
+            <!-- Filtros -->
+            <div class="filters">
+                <div class="form-group">
+                    <label>Fecha Inicio</label>
+                    <input type="date" id="fechaInicio">
+                </div>
+                <div class="form-group">
+                    <label>Fecha Fin</label>
+                    <input type="date" id="fechaFin">
+                </div>
+                <button class="btn btn-primary" onclick="filtrarPorFecha()">Filtrar</button>
+                <button class="btn btn-warning" onclick="cargarMovimientos()">Ver Todos</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Usuario</th>
+                            <th>Bodega Origen</th>
+                            <th>Bodega Destino</th>
+                            <th>Productos</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaMovimientos">
+                        <tr><td colspan="7" style="text-align:center;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Nuevo Movimiento -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2>Nuevo Movimiento</h2>
+            <div class="form-group">
+                <label>Tipo de Movimiento</label>
+                <select id="tipoMovimiento" onchange="actualizarBodegas()">
+                    <option value="">Seleccione...</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SALIDA">Salida</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                </select>
+            </div>
+            <div class="form-group" id="origenGroup" style="display:none;">
+                <label>Bodega Origen</label>
+                <select id="bodegaOrigen"></select>
+            </div>
+            <div class="form-group" id="destinoGroup" style="display:none;">
+                <label>Bodega Destino</label>
+                <select id="bodegaDestino"></select>
+            </div>
+
+            <h3 style="margin: 16px 0 10px; color:#1e3a5f;">Productos</h3>
+            <div id="productosContainer"></div>
+            <button class="btn btn-primary btn-sm" onclick="agregarProducto()" style="margin-top:10px;">+ Agregar Producto</button>
+
+            <div class="modal-actions">
+                <button class="btn btn-danger" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="guardarMovimiento()">Registrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        verificarAuth();
+        document.getElementById('userDisplay').textContent = getUsuario();
+
+        let bodegasList = [];
+        let productosList = [];
+
+        function showAlert(msg, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = msg;
+            alert.className = 'alert alert-' + type;
+            alert.style.display = 'block';
+            setTimeout(() => alert.style.display = 'none', 4000);
+        }
+
+        async function cargarMovimientos() {
+            try {
+                const movimientos = await obtenerMovimientos();
+                renderMovimientos(movimientos);
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        }
+
+        async function filtrarPorFecha() {
+            const inicio = document.getElementById('fechaInicio').value;
+            const fin = document.getElementById('fechaFin').value;
+
+            if (!inicio || !fin) {
+                showAlert('Seleccione ambas fechas', 'error');
+                return;
+            }
+
+            try {
+                const movimientos = await obtenerMovimientosPorFecha(inicio, fin);
+                renderMovimientos(movimientos);
+            } catch (e) {
+                showAlert('Error al filtrar', 'error');
+            }
+        }
+
+        function renderMovimientos(movimientos) {
+            const tbody = document.getElementById('tablaMovimientos');
+
+            if (movimientos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay movimientos</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = movimientos.map(m => `
+                <tr>
+                    <td>${m.id}</td>
+                    <td>${new Date(m.fecha).toLocaleString()}</td>
+                    <td><span class="badge badge-${m.tipoMovimiento.toLowerCase()}">${m.tipoMovimiento}</span></td>
+                    <td>${m.usuario}</td>
+                    <td>${m.bodegaOrigen || '-'}</td>
+                    <td>${m.bodegaDestino || '-'}</td>
+                    <td>${m.detalles ? m.detalles.map(d => d.producto + ' (' + d.cantidad + ')').join(', ') : '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function abrirModal() {
+            // Cargar bodegas y productos
+            bodegasList = await obtenerBodegas();
+            productosList = await obtenerProductos();
+
+            document.getElementById('tipoMovimiento').value = '';
+            document.getElementById('origenGroup').style.display = 'none';
+            document.getElementById('destinoGroup').style.display = 'none';
+            document.getElementById('productosContainer').innerHTML = '';
+
+            const optsBodegas = bodegasList.map(b => `<option value="${b.id}">${b.nombre}</option>`).join('');
+            document.getElementById('bodegaOrigen').innerHTML = '<option value="">Seleccione...</option>' + optsBodegas;
+            document.getElementById('bodegaDestino').innerHTML = '<option value="">Seleccione...</option>' + optsBodegas;
+
+            agregarProducto();
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function actualizarBodegas() {
+            const tipo = document.getElementById('tipoMovimiento').value;
+            document.getElementById('origenGroup').style.display = (tipo === 'SALIDA' || tipo === 'TRANSFERENCIA') ? 'block' : 'none';
+            document.getElementById('destinoGroup').style.display = (tipo === 'ENTRADA' || tipo === 'TRANSFERENCIA') ? 'block' : 'none';
+        }
+
+        function agregarProducto() {
+            const container = document.getElementById('productosContainer');
+            const optsProductos = productosList.map(p => `<option value="${p.id}">${p.nombre} (Stock: ${p.stock})</option>`).join('');
+
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; gap:10px; margin-bottom:8px; align-items:end;';
+            div.innerHTML = `
+                <div class="form-group" style="flex:2;">
+                    <select class="prod-select">
+                        <option value="">Seleccione producto...</option>
+                        ${optsProductos}
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <input type="number" class="prod-cantidad" placeholder="Cantidad" min="1">
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">X</button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function guardarMovimiento() {
+            const tipo = document.getElementById('tipoMovimiento').value;
+            if (!tipo) {
+                showAlert('Seleccione un tipo de movimiento', 'error');
+                return;
+            }
+
+            const detalles = [];
+            const rows = document.getElementById('productosContainer').children;
+            for (let row of rows) {
+                const prodId = row.querySelector('.prod-select').value;
+                const cantidad = row.querySelector('.prod-cantidad').value;
+                if (prodId && cantidad) {
+                    detalles.push({ productoId: parseInt(prodId), cantidad: parseInt(cantidad) });
+                }
+            }
+
+            if (detalles.length === 0) {
+                showAlert('Agregue al menos un producto', 'error');
+                return;
+            }
+
+            const data = {
+                tipoMovimiento: tipo,
+                detalles: detalles
+            };
+
+            if (tipo === 'SALIDA' || tipo === 'TRANSFERENCIA') {
+                data.bodegaOrigenId = parseInt(document.getElementById('bodegaOrigen').value);
+            }
+            if (tipo === 'ENTRADA' || tipo === 'TRANSFERENCIA') {
+                data.bodegaDestinoId = parseInt(document.getElementById('bodegaDestino').value);
+            }
+
+            try {
+                const res = await crearMovimiento(data);
+                if (res.ok) {
+                    showAlert('Movimiento registrado exitosamente', 'success');
+                    cerrarModal();
+                    cargarMovimientos();
+                } else {
+                    const err = await res.json();
+                    showAlert(err.mensaje || 'Error al registrar', 'error');
+                }
+            } catch (e) {
+                showAlert('Error de conexion', 'error');
+            }
+        }
+
+        cargarMovimientos();
+    </script>
+</body>
+</html>
