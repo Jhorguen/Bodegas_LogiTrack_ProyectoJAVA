@@ -29,7 +29,7 @@ public class ProductoService {
     }
 
     public List<ProductoResponse> obtenerStockBajo() {
-        return productoRepository.findByStockLessThan(0).stream()
+        return productoRepository.findByStockLessThan(10).stream()
                 .map(this::toResponse)
                 .toList();
     }
