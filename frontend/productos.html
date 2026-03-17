@@ -21,7 +21,7 @@
                 <a href="bodegas.html"><span>🏭</span> Bodegas</a>
                 <a href="productos.html" class="active"><span>📦</span> Productos</a>
                 <a href="movimientos.html"><span>🔄</span> Movimientos</a>
-                <a href="auditorias.html"><span>📋</span> Auditorias</a>
+                <a href="auditorias.html" class="solo-admin"><span>📋</span> Auditorias</a>
             </div>
             <div class="sidebar-footer">
                 <a href="#" onclick="logout()">Cerrar Sesion</a>
@@ -31,7 +31,7 @@
         <main class="main-content">
             <div class="page-header">
                 <h1>Gestion de Productos</h1>
-                <button class="btn btn-success" onclick="abrirModal()">+ Nuevo Producto</button>
+                <button class="btn btn-success" id="btnNuevo" onclick="abrirModal()" style="display:none;">+ Nuevo Producto</button>
             </div>
 
             <div id="alert" class="alert"></div>
@@ -88,6 +88,9 @@
     <script>
         verificarAuth();
         document.getElementById('userDisplay').textContent = getUsuario();
+        const esAdmin = getRol() === 'ADMIN';
+        if (esAdmin) document.getElementById('btnNuevo').style.display = 'block';
+        if (!esAdmin) document.querySelectorAll('.solo-admin').forEach(el => el.style.display = 'none');
 
         function showAlert(msg, type) {
             const alert = document.getElementById('alert');
@@ -115,8 +118,8 @@
                         <td class="${p.stock < 10 ? 'stock-bajo' : ''}">${p.stock}</td>
                         <td>$${p.precio.toLocaleString()}</td>
                         <td>
-                            <button class="btn btn-warning btn-sm" onclick="editarProducto(${p.id})">Editar</button>
-                            <button class="btn btn-danger btn-sm" onclick="borrarProducto(${p.id})">Eliminar</button>
+                            ${esAdmin ? `<button class="btn btn-warning btn-sm" onclick="editarProducto(${p.id})">Editar</button>
+                            <button class="btn btn-danger btn-sm" onclick="borrarProducto(${p.id})">Eliminar</button>` : '-'}
                         </td>
                     </tr>
                 `).join('');

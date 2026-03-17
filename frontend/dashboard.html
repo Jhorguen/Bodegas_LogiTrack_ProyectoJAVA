@@ -22,7 +22,7 @@
                 <a href="bodegas.html"><span>🏭</span> Bodegas</a>
                 <a href="productos.html"><span>📦</span> Productos</a>
                 <a href="movimientos.html"><span>🔄</span> Movimientos</a>
-                <a href="auditorias.html"><span>📋</span> Auditorias</a>
+                <a href="auditorias.html" class="solo-admin"><span>📋</span> Auditorias</a>
             </div>
             <div class="sidebar-footer">
                 <a href="#" onclick="logout()">Cerrar Sesion</a>
@@ -101,6 +101,9 @@
     <script>
         verificarAuth();
         document.getElementById('userDisplay').textContent = getUsuario();
+        if (getRol() !== 'ADMIN') {
+            document.querySelectorAll('.solo-admin').forEach(el => el.style.display = 'none');
+        }
 
         async function cargarDashboard() {
             try {
