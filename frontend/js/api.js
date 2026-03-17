@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:8080';
+const API_URL = window.location.hostname === 'localhost' || window.location.protocol === 'file:'
+    ? 'http://localhost:8080'
+    : 'https://bodegaslogitrackproyectojava-production.up.railway.app';
 
 function getToken() {
     return localStorage.getItem('token');
