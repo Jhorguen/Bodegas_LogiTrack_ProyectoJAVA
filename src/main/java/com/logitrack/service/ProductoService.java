@@ -2,6 +2,7 @@ package com.logitrack.service;
 
 import com.logitrack.dto.ProductoRequest;
 import com.logitrack.dto.ProductoResponse;
+import com.logitrack.exception.ResourceNotFoundException;
 import com.logitrack.model.Producto;
 import com.logitrack.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class ProductoService {
 
     public ProductoResponse obtenerPorId(Long id) {
         Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
         return toResponse(producto);
     }
 
@@ -49,7 +50,7 @@ public class ProductoService {
 
     public ProductoResponse actualizar(Long id, ProductoRequest request, String usuario) {
         Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
 
         String valoresAnteriores = producto.toString();
 
@@ -65,7 +66,7 @@ public class ProductoService {
 
     public void eliminar(Long id, String usuario) {
         Producto producto = productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
 
         auditoriaService.registrar("DELETE", usuario, "Producto", producto.toString(), null);
         productoRepository.delete(producto);

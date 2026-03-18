@@ -3,6 +3,8 @@ package com.logitrack.service;
 import com.logitrack.dto.MovimientoDetalleRequest;
 import com.logitrack.dto.MovimientoRequest;
 import com.logitrack.dto.MovimientoResponse;
+import com.logitrack.exception.ResourceNotFoundException;
+import com.logitrack.exception.StockInsuficienteException;
 import com.logitrack.model.*;
 import com.logitrack.model.enums.TipoMovimiento;
 import com.logitrack.repository.*;
@@ -38,7 +40,7 @@ public class MovimientoService {
     @Transactional
     public MovimientoResponse crear(MovimientoRequest request, String username) {
         Usuario usuario = usuarioRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         MovimientoInventario movimiento = new MovimientoInventario();
         movimiento.setTipoMovimiento(request.getTipoMovimiento());
@@ -47,19 +49,19 @@ public class MovimientoService {
         // Validar bodegas según tipo de movimiento
         if (request.getTipoMovimiento() == TipoMovimiento.ENTRADA) {
             Bodega destino = bodegaRepository.findById(request.getBodegaDestinoId())
-                    .orElseThrow(() -> new RuntimeException("Bodega destino no encontrada"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Bodega destino no encontrada"));
             movimiento.setBodegaDestino(destino);
 
         } else if (request.getTipoMovimiento() == TipoMovimiento.SALIDA) {
             Bodega origen = bodegaRepository.findById(request.getBodegaOrigenId())
-                    .orElseThrow(() -> new RuntimeException("Bodega origen no encontrada"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Bodega origen no encontrada"));
             movimiento.setBodegaOrigen(origen);
 
         } else if (request.getTipoMovimiento() == TipoMovimiento.TRANSFERENCIA) {
             Bodega origen = bodegaRepository.findById(request.getBodegaOrigenId())
-                    .orElseThrow(() -> new RuntimeException("Bodega origen no encontrada"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Bodega origen no encontrada"));
             Bodega destino = bodegaRepository.findById(request.getBodegaDestinoId())
-                    .orElseThrow(() -> new RuntimeException("Bodega destino no encontrada"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Bodega destino no encontrada"));
             movimiento.setBodegaOrigen(origen);
             movimiento.setBodegaDestino(destino);
         }
@@ -67,19 +69,19 @@ public class MovimientoService {
         // Procesar detalles (productos y cantidades)
         for (MovimientoDetalleRequest detalleReq : request.getDetalles()) {
             Producto producto = productoRepository.findById(detalleReq.getProductoId())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + detalleReq.getProductoId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + detalleReq.getProductoId()));
 
             // Actualizar stock según tipo
             if (request.getTipoMovimiento() == TipoMovimiento.ENTRADA) {
                 producto.setStock(producto.getStock() + detalleReq.getCantidad());
             } else if (request.getTipoMovimiento() == TipoMovimiento.SALIDA) {
                 if (producto.getStock() < detalleReq.getCantidad()) {
-                    throw new RuntimeException("Stock insuficiente para el producto: " + producto.getNombre());
+                    throw new StockInsuficienteException("Stock insuficiente para el producto: " + producto.getNombre());
                 }
                 producto.setStock(producto.getStock() - detalleReq.getCantidad());
             } else if (request.getTipoMovimiento() == TipoMovimiento.TRANSFERENCIA) {
                 if (producto.getStock() < detalleReq.getCantidad()) {
-                    throw new RuntimeException("Stock insuficiente para transferir: " + producto.getNombre());
+                    throw new StockInsuficienteException("Stock insuficiente para transferir: " + producto.getNombre());
                 }
                 // En transferencia el stock total no cambia, solo se mueve entre bodegas
             }

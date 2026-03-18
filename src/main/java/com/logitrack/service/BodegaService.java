@@ -2,6 +2,7 @@ package com.logitrack.service;
 
 import com.logitrack.dto.BodegaRequest;
 import com.logitrack.dto.BodegaResponse;
+import com.logitrack.exception.ResourceNotFoundException;
 import com.logitrack.model.Bodega;
 import com.logitrack.repository.BodegaRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class BodegaService {
 
     public BodegaResponse obtenerPorId(Long id) {
         Bodega bodega = bodegaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bodega no encontrada con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Bodega no encontrada con id: " + id));
         return toResponse(bodega);
     }
 
@@ -43,7 +44,7 @@ public class BodegaService {
 
     public BodegaResponse actualizar(Long id, BodegaRequest request, String usuario) {
         Bodega bodega = bodegaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bodega no encontrada con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Bodega no encontrada con id: " + id));
 
         String valoresAnteriores = bodega.toString();
 
@@ -59,7 +60,7 @@ public class BodegaService {
 
     public void eliminar(Long id, String usuario) {
         Bodega bodega = bodegaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bodega no encontrada con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Bodega no encontrada con id: " + id));
 
         auditoriaService.registrar("DELETE", usuario, "Bodega", bodega.toString(), null);
         bodegaRepository.delete(bodega);
