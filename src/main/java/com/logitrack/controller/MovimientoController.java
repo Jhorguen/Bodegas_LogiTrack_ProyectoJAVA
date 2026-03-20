@@ -25,6 +25,11 @@ public class MovimientoController {
         return ResponseEntity.ok(movimientoService.listarTodos());
     }
 
+    @GetMapping("/recientes")
+    public ResponseEntity<List<MovimientoResponse>> listarRecientes() {
+        return ResponseEntity.ok(movimientoService.listarRecientes());
+    }
+
     @GetMapping("/por-fechas")
     public ResponseEntity<List<MovimientoResponse>> listarPorFechas(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,

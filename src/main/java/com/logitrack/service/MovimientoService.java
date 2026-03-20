@@ -31,6 +31,12 @@ public class MovimientoService {
                 .toList();
     }
 
+    public List<MovimientoResponse> listarRecientes() {
+        return movimientoRepository.findTop10ByOrderByFechaDesc().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public List<MovimientoResponse> listarPorFechas(LocalDateTime inicio, LocalDateTime fin) {
         return movimientoRepository.findByFechaBetween(inicio, fin).stream()
                 .map(this::toResponse)
